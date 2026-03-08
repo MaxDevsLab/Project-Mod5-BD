@@ -1,0 +1,239 @@
+-- ============================================================
+--  Proyecto M5 en MySQL.
+-- ============================================================
+
+-- 1. CREAR Y SELECCIONAR LA BASE DE DATOS
+-- ============================================================
+CREATE DATABASE IF NOT EXISTS AlkeWallet
+    CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
+
+USE AlkeWallet;
+
+SHOW DATABASES;
+
+
+-- ============================================================
+-- 2. DDL – CREAR TABLAS
+-- ============================================================
+
+-- Tabla: moneda (debe crearse antes que usuario)
+CREATE TABLE IF NOT EXISTS moneda (
+    currency_id     INT          NOT NULL AUTO_INCREMENT,
+    currency_name   VARCHAR(60)  NOT NULL,
+    currency_symbol VARCHAR(10)  NOT NULL,
+    PRIMARY KEY (currency_id)
+);
+
+-- Tabla: usuario
+CREATE TABLE IF NOT EXISTS usuario (
+    user_id        INT            NOT NULL AUTO_INCREMENT,
+    nombre         VARCHAR(100)   NOT NULL,
+    correo         VARCHAR(150)   NOT NULL UNIQUE,
+    contrasena     VARCHAR(255)   NOT NULL,
+    saldo          DECIMAL(15,2)  NOT NULL DEFAULT 0.00,
+    currency_id    INT            NOT NULL,
+    fecha_creacion DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id),
+    INDEX idx_correo (correo),
+    CONSTRAINT fk_usuario_moneda
+        FOREIGN KEY (currency_id) REFERENCES moneda(currency_id)
+);
+
+-- Tabla: transaccion
+CREATE TABLE IF NOT EXISTS transaccion (
+    transaction_id   INT            NOT NULL AUTO_INCREMENT,
+    sender_user_id   INT            NOT NULL,
+    receiver_user_id INT            NOT NULL,
+    importe          DECIMAL(15,2)  NOT NULL,
+    transaction_date DATETIME       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (transaction_id),
+    INDEX idx_sender   (sender_user_id),
+    INDEX idx_receiver (receiver_user_id),
+    CONSTRAINT fk_sender
+        FOREIGN KEY (sender_user_id)   REFERENCES usuario(user_id),
+    CONSTRAINT fk_receiver
+        FOREIGN KEY (receiver_user_id) REFERENCES usuario(user_id)
+);
+
+-- Verificar las tablas creadas
+SHOW TABLES;
+DESCRIBE usuario;
+DESCRIBE moneda;
+DESCRIBE transaccion;
+
+
+-- ============================================================
+-- 3. DML – INSERTAR DATOS DE PRUEBA
+-- ============================================================
+
+-- Insertar monedas
+INSERT INTO moneda (currency_name, currency_symbol) VALUES
+    ('Peso Chileno',   'CLP'),
+    ('Dólar',          'USD'),
+    ('Euro',           'EUR'),
+    ('Peso Argentino', 'ARS'),
+    ('Sol Peruano',    'PEN');
+
+-- Insertar usuarios
+
+INSERT INTO usuario (nombre, correo, contrasena, saldo, currency_id) VALUES
+    ('Pedro Martínez',   'pedro.martinez@mail.com',   SHA2('pass321', 256),  95000.00, 1),
+    ('Sofía Herrera',    'sofia.herrera@mail.com',    SHA2('pass229', 256), 180500.75, 2),
+    ('Diego Morales',    'diego.morales@mail.com',    SHA2('pass381', 256),  42000.00, 1),
+    ('Valentina Rojas',  'valentina.rojas@mail.com',  SHA2('pass142', 256), 305000.00, 3),
+    ('Andrés Castillo',  'andres.castillo@mail.com',  SHA2('pass777', 256),  67000.25, 2);
+
+-- Insertar transacciones
+INSERT INTO transaccion (sender_user_id, receiver_user_id, importe) VALUES
+    (1, 2, 50000.00),
+    (2, 3, 12000.00),
+    (3, 1,  8500.00),
+    (1, 4, 25000.00),
+    (5, 1, 75000.00),
+    (2, 5, 30000.00);
+
+
+-- ============================================================
+-- 4. SELECT – CONSULTAS
+-- ============================================================
+
+-- 4.1 Moneda elegida por un usuario específico (user_id = 1)
+SELECT
+    u.user_id,
+    u.nombre          AS nombre_usuario,
+    m.currency_name   AS moneda,
+    m.currency_symbol AS simbolo
+FROM usuario u
+INNER JOIN moneda m ON u.currency_id = m.currency_id
+WHERE u.user_id = 1;
+
+-- 4.2 Todas las transacciones registradas
+SELECT
+    t.transaction_id,
+    s.nombre           AS remitente,
+    r.nombre           AS destinatario,
+    t.importe,
+    t.transaction_date AS fecha
+FROM transaccion t
+INNER JOIN usuario s ON t.sender_user_id   = s.user_id
+INNER JOIN usuario r ON t.receiver_user_id = r.user_id
+ORDER BY t.transaction_date DESC;
+
+-- 4.3 Todas las transacciones de un usuario específico (user_id = 1)
+SELECT
+    t.transaction_id,
+    CASE
+        WHEN t.sender_user_id = 1 THEN 'ENVIADA'
+        ELSE 'RECIBIDA'
+    END                AS tipo,
+    s.nombre           AS remitente,
+    r.nombre           AS destinatario,
+    t.importe,
+    t.transaction_date AS fecha
+FROM transaccion t
+INNER JOIN usuario s ON t.sender_user_id   = s.user_id
+INNER JOIN usuario r ON t.receiver_user_id = r.user_id
+WHERE t.sender_user_id = 1
+   OR t.receiver_user_id = 1
+ORDER BY t.transaction_date DESC;
+
+-- 4.4 (Tarea Plus) Vista top 5 usuarios con mayor saldo
+CREATE OR REPLACE VIEW vw_top5_saldo AS
+SELECT
+    u.user_id,
+    u.nombre,
+    u.saldo,
+    m.currency_symbol
+FROM usuario u
+INNER JOIN moneda m ON u.currency_id = m.currency_id
+ORDER BY u.saldo DESC
+LIMIT 5;
+
+SELECT * FROM vw_top5_saldo;
+
+
+-- ============================================================
+-- 5. DML – UPDATE Y DELETE
+-- ============================================================
+
+-- 5.1 Modificar correo de un usuario específico
+UPDATE usuario
+SET correo = 'ana.garcia.nuevo@mail.com'
+WHERE user_id = 1;
+
+-- Verificar cambio
+SELECT user_id, nombre, correo FROM usuario WHERE user_id = 1;
+
+-- 5.2 Eliminar una transacción completa
+DELETE FROM transaccion
+WHERE transaction_id = 6;
+
+-- Verificar eliminación
+SELECT * FROM transaccion;
+
+-- 5.3 Actualizar saldo luego de una transacción
+UPDATE usuario SET saldo = saldo - 50000.00 WHERE user_id = 1;
+UPDATE usuario SET saldo = saldo + 50000.00 WHERE user_id = 2;
+
+
+-- ============================================================
+-- 6. TRANSACCIONALIDAD – ACID
+-- ============================================================
+
+-- 6.1 Transacción exitosa con COMMIT
+START TRANSACTION;
+
+    INSERT INTO transaccion (sender_user_id, receiver_user_id, importe)
+    VALUES (1, 3, 20000.00);
+
+    UPDATE usuario SET saldo = saldo - 20000.00 WHERE user_id = 1;
+    UPDATE usuario SET saldo = saldo + 20000.00 WHERE user_id = 3;
+
+COMMIT;
+
+-- 6.2 Transacción con error → ROLLBACK
+START TRANSACTION;
+
+    -- user_id 999 no existe → violación de FK
+    INSERT INTO transaccion (sender_user_id, receiver_user_id, importe)
+    VALUES (1, 999, 5000.00);
+
+ROLLBACK;
+
+-- Verificar que no se insertó nada
+SELECT * FROM transaccion ORDER BY transaction_id DESC LIMIT 5;
+
+
+-- ============================================================
+-- 7. AGREGACIONES
+-- ============================================================
+
+-- Total de transacciones y monto por usuario
+SELECT
+    u.user_id,
+    u.nombre,
+    COUNT(t.transaction_id) AS total_transacciones,
+    SUM(t.importe)          AS total_importe
+FROM usuario u
+LEFT JOIN transaccion t
+    ON u.user_id = t.sender_user_id
+    OR u.user_id = t.receiver_user_id
+GROUP BY u.user_id, u.nombre
+ORDER BY total_transacciones DESC;
+
+-- Sub-consulta: transacciones enviadas por usuario
+SELECT
+    u.nombre,
+    (SELECT COUNT(*) FROM transaccion t
+     WHERE t.sender_user_id = u.user_id) AS enviadas
+FROM usuario u
+ORDER BY enviadas DESC;
+
+
+-- ============================================================
+-- 8. INSPECCIÓN FINAL
+-- ============================================================
+SHOW CREATE TABLE usuario;
+SHOW CREATE TABLE moneda;
+SHOW CREATE TABLE transaccion;
