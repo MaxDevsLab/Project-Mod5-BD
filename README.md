@@ -1,5 +1,8 @@
 # 🪙 AlkeWallet — Proyecto de Base de Datos Relacional
 
+> **Docente: Sabina Romero
+> **Estudiante: Maximiliano Vilugrón
+
 > **Módulo 5 · Evaluación Integradora ABP**  
 > Fundamentos de Bases de Datos Relacionales con MySQL
 
@@ -60,7 +63,7 @@ AlkeWallet/
 ### Pasos para ejecutar
 
 ```sql
--- 1. Clonar o descargar el repositorio
+-- 1. Descargar el repositorio
 -- 2. Abrir el archivo AlkeWallet_DB.sql en tu cliente MySQL
 -- 3. Ejecutar el script completo, o por secciones según necesidad
 
@@ -173,7 +176,9 @@ ROLLBACK;
 
 ## 👤 Autor
 
-Proyecto desarrollado como evaluación del Módulo 5 del programa **Alke — Desarrollo Fullstack**.
+> **Docente: Sabina Romero
+> **Estudiante: Maximiliano Vilugrón
+Proyecto desarrollado como evaluación del Módulo 5 del programa **Alke — Desarrollo Fullstack JavaScript**.
 
 ---
 
