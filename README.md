@@ -176,8 +176,8 @@ ROLLBACK;
 
 ## 👤 Autor
 
-> **Docente: Sabina Romero
-> **Estudiante: Maximiliano Vilugrón
+> **Docente: Sabina Romero. 
+> **Estudiante: Maximiliano Vilugrón. 
 Proyecto desarrollado como evaluación del Módulo 5 del programa **Alke — Desarrollo Fullstack JavaScript**.
 
 ---
